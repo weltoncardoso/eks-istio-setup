@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-nginx
+  namespace: ns-nginx
+  labels:
+    app: app-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-nginx
+  template:
+    metadata:
+      labels:
+        app: app-nginx
+    spec:
+      containers:
+      - env:
+        - name: APP_NAME
+          value: "NGINX"
+        name: app-nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Always

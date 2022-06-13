@@ -1,0 +1,89 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+#################################################################################################
+# Nessa parte ficam os dados mais simples, o nome, a versão do Kubernetes e a região.           #
+#################################################################################################
+metadata:
+  name: <NOME DO CLUSTER> 
+  version: "1.21"
+  region: <REGIÃO>
+
+###############################################################################################
+# Aqui ficam os recursos do IAM, ou seja, as credenciais para utilizar outros recursos da AWS.#
+###############################################################################################
+iam:
+  withOIDC: true
+  serviceAccounts: 
+  - metadata:
+      name: aws-load-balancer-controller
+      namespace: kube-system
+    attachPolicyARNs:
+      - "<ARN DA POLICY>/AWSLoadBalancerControllerIAMPolicy220"
+    wellKnownPolicies:
+      awsLoadBalancerController: true
+  serviceRoleARN: arn:aws:iam::<ID DA CONTA>:role/EKSClusterRole
+
+##############################################################################################
+# Configurações de rede, você pode especificar Grupos de Segurança, Subnets, VPC, e outros   #
+# recursos customizados, caso contrário, o EKSCTL irá criar tudo sozinho.                    #
+##############################################################################################
+vpc:
+  id: <ID DA VPC>
+  securityGroup: <GRUPO DE SEGURANÇA>
+  manageSharedNodeSecurityGroupRules: true
+  subnets:
+    private:
+      <ZONA DE DISPONIBILDIADE>
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+###############################################################################################
+# Essa parte pertence ao Data Plane, nela você configura os Node Groups que rodarão os workers#
+# então você pode configurar a sua maneira, um detalhe importante, existem 3 tipos de Node    #
+# Group: Managed, Fargate ou gerenciado pel próprio usuário. Nessa configuração vamos utilizar#
+# o Managed, que é um misto entre a AWS e o usuário, nós podemos escalar caso necessário      #
+# manualmente ou automaticamente com a AWS, por exemplo. Esse também contempla instâncias spot#
+###############################################################################################
+managedNodeGroups:
+  - name: eks-nodegroup-<NOME DO CLUSTER>-01
+    labels: { role: workers-app }
+    instanceType: <TIPO DE INSTÂNCIA>
+    spot: true
+    minSize: <TAMANHO MÍNIMO DO AUTO SCALING>
+    maxSize: <TAMANHO MÁXIMO DO AUTO SCALING>
+    desiredCapacity: <TAMANHO INICIAL DESEJÁVEL>
+    volumeSize: <TAMANHO DO DISCO>
+    privateNetworking: true
+
+  - name: eks-nodegroup-<NOME DO CLUSTER>-02
+    labels: { role: workers-infra }
+    instanceType: <TIPO DE INSTÂNCIA>
+    spot: true
+    minSize: <TAMANHO MÍNIMO DO AUTO SCALING>
+    maxSize: <TAMANHO MÁXIMO DO AUTO SCALING>
+    desiredCapacity: <TAMANHO INICIAL DESEJÁVEL>
+    volumeSize: <TAMANHO DO DISCO>
+    privateNetworking: true
+
+###############################################################################################
+# Aqui serve para encriptar seus secrets dentro do Cluster, essa confinguração, no caso, serve#
+# diretamente no KMS.                                                                         #
+###############################################################################################
+secretsEncryption:
+   keyARN: <ARN DA KEY NO KMS>
+
+###############################################################################################
+# Os addons são componentes do cluster onde também são gerenciados pela AWS  e pelo usuário.  # 
+# Aqui utilizaremos o addon de rede (vpc-cni), o coredns e o kube-proxy.                      # 
+###############################################################################################
+addons:
+- name: vpc-cni
+  version: latest
+  attachPolicyARNs:
+    - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+- name: coredns
+  version: latest
+- name: kube-proxy
+  version: latest
