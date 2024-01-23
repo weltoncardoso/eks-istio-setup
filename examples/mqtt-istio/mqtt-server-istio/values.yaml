@@ -1,0 +1,57 @@
+metadata:
+  namespace: istio-teste
+image:
+  repository: 029510547839.dkr.ecr.us-east-1.amazonaws.com/mqttserver-repository
+  tag: "mqttserver-staging-12520bf2-20231228173652"
+
+imagePullSecrets:
+  - name: regcred
+
+mqttServer:
+  name: mqtt-server-istio
+  version: v2
+  replicaCount: 1
+  revisionHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 2
+      memory: 6Gi
+    limits:
+      cpu: 2
+      memory: 6Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 70
+  containerPorts:
+    tcp: 4222
+    mqtt: 1883
+  service:
+    name: mqtt-server-istio
+    ports:
+      - name: tcp
+        port: 4222
+        targetPort: 4222
+      - name: mqtt
+        port: 1883
+        targetPort: 1883
+    type: ClusterIP
+
+redis:
+  name: redis-mqtt-server-istio
+  image:
+    repository: redis
+    tag: 7.0-alpine
+  replicaCount: 1
+  command: ["redis-server", "--maxclients", "50000"]
+  containerPorts:
+    redis: 6379
+  service:
+    name: redis-mqtt-server-istio
+    ports:
+      - name: redis
+        port: 6379
+        targetPort: 6379
+    type: ClusterIP

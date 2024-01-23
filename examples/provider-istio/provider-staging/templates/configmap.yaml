@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: provider-map
+data:
+  REDIS_URL: "{{ .Values.redis.service.name }}-svc.{{ .Values.metadata.namespace }}.svc.cluster.local:{{ (index .Values.redis.service.ports 0).port }}"
+  NATS_URL: nats-headless.istio-teste.svc.cluster.local:4222
+  NATS_URL-2: "nats://teste.nats.incloud.intelbras.com.br:{{ (index .Values.provider.service.ports 0).port }}"
+  LIB_NATS_ADDRESS_SERVER: nats-headless.istio-teste.svc.cluster.local:4222
+  MQTT_KEEP_ALIVE: "20"
+  MQTT_URL: mqtt://teste.mqttserver.incloud.intelbras.com.br:1883
+  PROVIDER_MODE: remote
+  LIB_NATS_STREAM_NAME: default
+  LIB_NATS_CRED_FILE: "/home/user/secret/lib"
+  NATS_CREDS: "/home/user/secret/cred"

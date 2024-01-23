@@ -1,0 +1,24 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  components:
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+      - name: istio-ingressgateway-staging
+        namespace: istio-ingress
+        enabled: true
+        label:
+          istio: ingressgateway-staging
+          app: istio-ingressgateway-staging
+        k8s:
+          serviceAnnotations: 
+            service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+            service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+            service.beta.kubernetes.io/aws-load-balancer-internal: "false"   
+    egressGateways:
+      - name: istio-egressgateway
+        enabled: true
+      - name: istio-egressgateway-staging
+        enabled: true
+        namespace: istio-ingress

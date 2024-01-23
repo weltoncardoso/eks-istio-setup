@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mqtt-server-map
+data:
+  REDIS_URL: "{{ .Values.redis.service.name }}-svc.{{ .Values.metadata.namespace }}.svc.cluster.local:{{ (index .Values.redis.service.ports 0).port }}"
+  NATS_URL: nats-headless.istio-teste.svc.cluster.local:4222
+  LIB_NATS_ADDRESS_SERVER: nats-headless.istio-teste.svc.cluster.local:4222
+  CLIENT_MQTT_KEEP_ALIVE: "20"
+  MQTT_PORT: "1883"
+  CLIENT_INGRESS_URL_BROKER: "mqtt://teste.mqttserver.incloud.intelbras.com.br:{{ (index .Values.mqttServer.service.ports 1).port }}"
+  MQTT_REMOTE_MODE: remote
+  LIB_NATS_STREAM_NAME: default
+  MQTT_TLS_CERT: "/home/user/secret/tls/cert"
+  MQTT_TLS_KEY: "/home/user/secret/tls/key"
+  LIB_NATS_CRED_FILE: "/home/user/cert/cred"
+  CLIENT_INGRESS_TOKEN: "eyJ0eXAiOiJKV1QiLCJhbGciOiJlZDI1NTE5LW5rZXkifQ.eyJqdGkiOiJKSzRQRFZQTEdINExaSVlJSzUzSjIyRkxGVEpMVlFDTDIzWFRUTUhPU1pHSUtRNk1XWVFBIiwiaWF0IjoxNjU5NDUzNTU2LCJpc3MiOiJBQTdCWkNDVTI2QjdaUko1NlpGVkJTUUlLUU1UVDNYQ0FSTk5MM1hSR1BVRllWM0lMQk5NVEZKTiIsIm5hbWUiOiJtcXR0Iiwic3ViIjoiVURXNEQyRVJPQlpVQ05JVVdHUFZJTEFISzRENkVURUpKQTVWWlRNUlVBTTIzUFZJVVJMMllBQTciLCJuYXRzIjp7InB1YiI6eyJhbGxvdyI6WyIkSlMuXHUwMDNlIiwiJE1RVFQuXHUwMDNlIiwiaW5jbG91ZC4qLmRldmljZS5cdTAwM2UiXX0sInN1YiI6eyJhbGxvdyI6WyIkSlMuXHUwMDNlIiwiJE1RVFQuXHUwMDNlIiwiaW5jbG91ZC4qLmRldmljZS5cdTAwM2UiXX0sInJlc3AiOnsibWF4IjoxMDAsInR0bCI6NjAwMDAwMDAwMDB9LCJzdWJzIjotMSwiZGF0YSI6LTEsInBheWxvYWQiOjEwNDg1NzYsImJlYXJlcl90b2tlbiI6dHJ1ZSwiYWxsb3dlZF9jb25uZWN0aW9uX3R5cGVzIjpbIk1RVFQiXSwidHlwZSI6InVzZXIiLCJ2ZXJzaW9uIjoyfX0.49isyXtN5IF8Fzl8792uA1k8go0B3qDaM9cJwWgQZuQsCVTQ0kZX93mDfEh-bACgKPkKnKAt9GxC0Izouj4DBw"

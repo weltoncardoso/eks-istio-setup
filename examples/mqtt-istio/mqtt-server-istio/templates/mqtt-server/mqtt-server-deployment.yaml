@@ -1,0 +1,139 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  labels:
+    app.kubernetes.io/name: {{ .Values.mqttServer.name }}
+    app.kubernetes.io/instance: "{{ .Values.mqttServer.name }}-instance"
+    app.kubernetes.io/version: '1.2.0'
+    app.kubernetes.io/managed-by: kubectl
+    version: {{ .Values.mqttServer.version }}
+  namespace: {{ .Values.metadata.namespace }}
+  name: "{{ .Values.mqttServer.name }}-rollout"
+spec:
+  replicas: {{ .Values.mqttServer.replicaCount }}
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {duration: 3}
+      - setWeight: 40
+      - pause: {duration: 3}
+      - setWeight: 50
+      - pause: {}
+      - setWeight: 60
+      - pause: {duration: 3}
+      - setWeight: 80
+      - pause: {} 
+  revisionHistoryLimit: {{ .Values.mqttServer.revisionHistoryLimit }}
+
+  selector:
+    matchLabels:
+      app: {{ .Values.mqttServer.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.mqttServer.name }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node
+                operator: In
+                values:
+                - mqtt-server-teste
+      containers:
+        - name: {{ .Values.mqttServer.name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+          - name: secret
+            mountPath: "/home/user/secret"
+            readOnly: true
+          - name: cert
+            mountPath: "/home/user/cert"
+            readOnly: true
+          ports:
+            {{- range $key, $value := .Values.mqttServer.containerPorts }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+              protocol: TCP
+            {{- end }}
+          resources:
+            requests:
+              memory: {{ .Values.mqttServer.resources.requests.memory }}
+              cpu: {{ .Values.mqttServer.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.mqttServer.resources.limits.memory }}
+              cpu: {{ .Values.mqttServer.resources.limits.cpu }}
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: REDIS_URL
+            - name: NATS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: NATS_URL
+            - name: LIB_NATS_ADDRESS_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: LIB_NATS_ADDRESS_SERVER
+            - name: CLIENT_INGRESS_URL_BROKER
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: CLIENT_INGRESS_URL_BROKER
+            - name: CLIENT_MQTT_KEEP_ALIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: CLIENT_MQTT_KEEP_ALIVE
+            - name: MQTT_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: MQTT_PORT
+            - name: LIB_NATS_CRED_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: LIB_NATS_CRED_FILE
+            - name: MQTT_TLS_CERT
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: MQTT_TLS_CERT
+            - name: MQTT_TLS_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: MQTT_TLS_KEY
+            - name: CLIENT_INGRESS_TOKEN
+              valueFrom:
+                configMapKeyRef:
+                  name: mqtt-server-map
+                  key: CLIENT_INGRESS_TOKEN
+      volumes:
+      - name: secret
+        secret:
+          secretName: nats-client-tls
+          items:
+          - key: tls.crt
+            path: tls/cert
+          - key: tls.key
+            path: tls/key
+      - name: cert
+        secret:
+          secretName: mqtt-server-map
+          items:
+          - key: LIB_NATS_CRED_FILE
+            path: cred
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

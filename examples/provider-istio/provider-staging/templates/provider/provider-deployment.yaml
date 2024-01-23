@@ -1,0 +1,137 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  labels:
+    app.kubernetes.io/name: {{ .Values.provider.name }}
+    app.kubernetes.io/instance: "{{ .Values.provider.name }}-instance"
+    app.kubernetes.io/version: '1.2.0'
+    app.kubernetes.io/managed-by: kubectl
+    version: {{ .Values.provider.version }}
+  namespace: {{ .Values.metadata.namespace }}
+  name: "{{ .Values.provider.name }}-rollout"
+spec:
+  replicas: {{ .Values.provider.replicaCount }}
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {duration: 10}
+      - setWeight: 40
+      - pause: {duration: 10}
+      - setWeight: 60
+      - pause: {duration: 10}
+      - setWeight: 80
+      - pause: {} 
+  revisionHistoryLimit: {{ .Values.provider.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app: {{ .Values.provider.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.provider.name }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node
+                operator: In
+                values:
+                - spot-provider-staging
+      containers:
+        - name: {{ .Values.provider.name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+          - name: secret
+            mountPath: "/home/user/secret"
+            readOnly: true
+          ports:
+            {{- range $key, $value := .Values.provider.containerPorts }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+              protocol: TCP
+            {{- end }}
+          resources:
+            requests:
+              memory: {{ .Values.provider.resources.requests.memory }}
+              cpu: {{ .Values.provider.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.provider.resources.limits.memory }}
+              cpu: {{ .Values.provider.resources.limits.cpu }}
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: REDIS_URL
+            - name: NATS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: NATS_URL
+            - name: MQTT_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: MQTT_URL
+            - name: MQTT_KEEP_ALIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: MQTT_KEEP_ALIVE
+            - name: PROVIDER_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: PROVIDER_MODE
+            - name: LIB_NATS_STREAM_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: LIB_NATS_STREAM_NAME
+            - name: LIB_NATS_ADDRESS_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: LIB_NATS_ADDRESS_SERVER
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: provider
+                  key: DATABASE_URL
+            - name: NATS_CREDS
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: NATS_CREDS
+            - name: NATS_CREDS_SYS
+              valueFrom:
+                secretKeyRef:
+                  name: provider
+                  key: NATS_CREDS_SYS
+            - name: MQTT_AC_ID
+              valueFrom:
+                secretKeyRef:
+                  name: provider
+                  key: MQTT_AC_ID
+            - name: LIB_NATS_CRED_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: provider-map
+                  key: LIB_NATS_CRED_FILE
+      volumes:
+      - name: secret
+        secret:
+          secretName: provider
+          items:
+          - key: LIB_NATS_CRED_FILE
+            path: cred
+          - key: NATS_CREDS 
+            path: lib
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,26 @@
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: "{{ .Values.mqttServer.name }}-hpa"
+  namespace: {{ .Values.metadata.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: argoproj.io/v1alpha1 
+    kind: Rollout 
+    name: "{{ .Values.mqttServer.name }}-rollout"
+  minReplicas:  {{ .Values.mqttServer.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.mqttServer.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.mqttServer.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.mqttServer.autoscaling.targetMemoryUtilizationPercentage }}
+ 

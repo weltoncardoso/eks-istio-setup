@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  labels:
+    app.kubernetes.io/name: {{ .Values.redis.name }}
+    app.kubernetes.io/instance: "{{ .Values.redis.name }}-instance"
+    app.kubernetes.io/version: 1.2.0
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/managed-by: kubectl
+  namespace: {{ .Values.metadata.namespace }}
+  name: "{{ .Values.redis.name }}-rollout"
+spec:
+  replicas: {{ .Values.redis.replicaCount }}
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {duration: 10}
+      - setWeight: 40
+      - pause: {duration: 10}
+      - setWeight: 60
+      - pause: {duration: 10}
+      - setWeight: 80
+      - pause: {} 
+  revisionHistoryLimit: {{ .Values.mqttServer.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app: {{ .Values.redis.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.redis.name }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node
+                operator: In
+                values:
+                - redis-mqtt-teste
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          command:
+          {{- range .Values.redis.command }}
+            - {{ . | quote }}
+          {{- end }}
+          ports:
+            {{- range $key, $value := .Values.redis.containerPorts }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+              protocol: TCP
+            {{- end }}
+          env:
+          - name: REDIS_URL
+            valueFrom:
+              configMapKeyRef:
+                name: mqtt-server-map
+                key: REDIS_URL
+          

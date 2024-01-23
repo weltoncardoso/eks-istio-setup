@@ -1,0 +1,53 @@
+metadata:
+  namespace: istio-teste
+image:
+  repository: 029510547839.dkr.ecr.us-east-1.amazonaws.com/provider-repository
+  tag: "provider-staging-secondary-8d41845e-20230901171652"
+
+imagePullSecrets:
+  - name: regcred
+
+provider:
+  name: provider-istio
+  version: v2
+  replicaCount: 1
+  revisionHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 1
+      memory: 2Gi
+    limits:
+      cpu: 1.5
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 70
+  containerPorts:
+    tcp: 4222
+  service:
+    name: provider-istio
+    ports:
+      - name: tcp
+        port: 4222
+        targetPort: 4222
+    type: ClusterIP
+
+redis:
+  name: redis-provider-istio
+  image:
+    repository: redis
+    tag: 7.0-alpine
+  replicaCount: 1
+  command: ["redis-server", "--maxclients", "200000"]
+  containerPorts:
+    redis: 6379
+  service:
+    name: redis-provider-istio
+    ports:
+      - name: redis
+        port: 6379
+        targetPort: 6379
+    type: ClusterIP

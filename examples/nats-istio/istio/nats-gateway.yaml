@@ -1,0 +1,64 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: nats-gateway
+  namespace: incloud-staging
+spec:
+  # The selector matches the ingress gateway pod labels.
+  # If you installed Istio using Helm following the standard documentation, this would be "istio=ingress"
+  selector:
+    istio: ingressgateway-staging
+  servers:
+  - hosts:
+    - teste.nats.incloud.intelbras.com.br
+    port:
+      name: http
+      number: 8080
+      protocol: TCP
+  - hosts:
+    - teste.mqttserver.incloud.intelbras.com.br
+    - teste.nats.incloud.intelbras.com.br
+    port:
+      name: tcp-nats
+      number: 4222
+      protocol: TCP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: nats
+  namespace: incloud-staging
+spec:
+  hosts:
+  - teste.mqttserver.incloud.intelbras.com.br
+  - teste.nats.incloud.intelbras.com.br
+  gateways:
+  - nats-gateway
+  tcp:
+  - match:
+    - port: 4222
+    route:
+    - destination:
+        host: nats-headless
+        port:
+          number: 4222
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: nats-monitor
+  namespace: incloud-staging
+spec:
+  gateways:
+  - nats-gateway
+  hosts:
+  - teste.nats.incloud.intelbras.com.br
+  tcp:
+  - match:
+    - port: 8080
+    route:
+    - destination:
+        host: nats-headless
+        port:
+          number: 9080
